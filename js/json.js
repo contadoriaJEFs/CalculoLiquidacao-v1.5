@@ -78,14 +78,17 @@ function exportarCaso() {
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    let nomeArquivo = 'calculo_previdenciario';
-    const processo = document.getElementById('processo').value.trim();
-    if (processo) {
-        nomeArquivo += '_' + processo.replace(/[^a-zA-Z0-9]/g, '_');
-    } else {
-        nomeArquivo += '_' + new Date().toISOString().slice(0,10);
-    }
-    nomeArquivo += '.json';
+
+    // ===== GERAÇÃO DO NOME PERSONALIZADO =====
+    const autor = document.getElementById('autor')?.value?.trim() || '';
+    const processo = document.getElementById('processo')?.value?.trim() || '';
+
+    const autorSanitizado = sanitizarAutor(autor);
+    const numeroProcesso = extrairSeisPrimeirosNumeros(processo);
+    const dataHora = formatarDataHoraArquivo();
+
+    const nomeArquivo = `calc_${autorSanitizado}_${numeroProcesso}_${dataHora}.json`;
+
     link.href = url;
     link.download = nomeArquivo;
     document.body.appendChild(link);
@@ -232,3 +235,42 @@ function novoCaso() {
         document.querySelector('input[name="modoCompensacao"][value="limite"]').checked = true;
     }
 }
+// =====================================================================
+// AUXILIARES PARA NOME DO ARQUIVO JSON
+// =====================================================================
+
+function sanitizarAutor(nome) {
+    if (!nome || nome.trim() === '') return 'SEM_AUTOR';
+    // Remove acentos
+    const semAcentos = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    // Maiúsculas, substitui espaços por underline, remove caracteres inválidos
+    let sanitizado = semAcentos
+        .toUpperCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^A-Z0-9_]/g, '');
+    // Remove underlines duplicados
+    sanitizado = sanitizado.replace(/_+/g, '_');
+    // Remove underline no início e fim
+    sanitizado = sanitizado.replace(/^_|_$/g, '');
+    return sanitizado || 'SEM_AUTOR';
+}
+
+function extrairSeisPrimeirosNumeros(processo) {
+    if (!processo) return 'SEM_PROCESSO';
+    const numeros = processo.replace(/\D/g, '');
+    if (numeros.length === 0) return 'SEM_PROCESSO';
+    const seisPrimeiros = numeros.substring(0, 6);
+    return seisPrimeiros;
+}
+
+function formatarDataHoraArquivo() {
+    const agora = new Date();
+    const dia = String(agora.getDate()).padStart(2, '0');
+    const mes = String(agora.getMonth() + 1).padStart(2, '0');
+    const ano = agora.getFullYear();
+    const horas = String(agora.getHours()).padStart(2, '0');
+    const minutos = String(agora.getMinutes()).padStart(2, '0');
+    const segundos = String(agora.getSeconds()).padStart(2, '0');
+    return `${dia}${mes}${ano}-${horas}-${minutos}-${segundos}`;
+}
+
