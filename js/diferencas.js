@@ -58,6 +58,24 @@ function normalizarDia30(dia) {
     return dia > 30 ? 30 : dia;
 }
 
+// Função de comparação de datas completas (considera ano, mês, dia)
+function compararDataProporcional30(a, b) {
+    if (!a && !b) return 0;
+    if (!a) return -1;
+    if (!b) return 1;
+    if (a.ano !== b.ano) return a.ano - b.ano;
+    if (a.mes !== b.mes) return a.mes - b.mes;
+    return a.dia - b.dia;
+}
+
+function maxDataProporcional30(a, b) {
+    return compararDataProporcional30(a, b) >= 0 ? a : b;
+}
+
+function minDataProporcional30(a, b) {
+    return compararDataProporcional30(a, b) <= 0 ? a : b;
+}
+
 function calcularDiasAtivos30(mes, ano, dataInicio, dataFim) {
     // dataInicio e dataFim são objetos { dia, mes, ano } ou null
     // Se null, considera-se início = 1, fim = 30 (mês completo)
@@ -130,19 +148,17 @@ function obterDataFimAnalise() {
 function obterFracaoDevida(mes, ano) {
     const dib = document.getElementById('dib').value;
     const dataDib = parseDataProporcional30(dib);
-    const dataInicio = obterDataInicioAnalise();
-    const dataFim = obterDataFimAnalise();
+    const dataInicioAnalise = obterDataInicioAnalise();
+    const dataFimAnalise = obterDataFimAnalise();
 
-    if (!dataDib || !dataInicio || !dataFim) {
+    if (!dataDib || !dataInicioAnalise || !dataFimAnalise) {
         console.warn('[FracaoDevida] Data inválida, fração 0');
         return 0;
     }
 
-    // Início = max(DIB, TermoInicial)
-    const inicio = (converterCompetenciaParaNumero(dataDib.mes+'/'+dataDib.ano) > converterCompetenciaParaNumero(dataInicio.mes+'/'+dataInicio.ano))
-        ? dataDib : dataInicio;
-    // Fim = DataFinal
-    const fim = dataFim;
+    // Início = max(DIB, TermoInicial) comparando data completa
+    const inicio = maxDataProporcional30(dataDib, dataInicioAnalise);
+    const fim = dataFimAnalise;
 
     return calcularFracaoAtiva(mes, ano, inicio, fim);
 }
@@ -160,15 +176,13 @@ function obterFracaoRecebida(mes, ano, ben) {
         return 0;
     }
 
-    // Início = max(DIP ou DIB, TermoInicial)
+    // Início = max(DIP ou DIB, TermoInicial) comparando data completa
     const inicioDia = dataDip || dataDib;
-    const inicio = (converterCompetenciaParaNumero(inicioDia.mes+'/'+inicioDia.ano) > converterCompetenciaParaNumero(dataInicioAnalise.mes+'/'+dataInicioAnalise.ano))
-        ? inicioDia : dataInicioAnalise;
+    const inicio = maxDataProporcional30(inicioDia, dataInicioAnalise);
 
-    // Fim = min(DCB ou DataFinal, DataFinal)
+    // Fim = min(DCB ou DataFinal, DataFinal) comparando data completa
     const fimOriginal = dataDcb || dataFimAnalise;
-    const fim = (converterCompetenciaParaNumero(fimOriginal.mes+'/'+fimOriginal.ano) < converterCompetenciaParaNumero(dataFimAnalise.mes+'/'+dataFimAnalise.ano))
-        ? fimOriginal : dataFimAnalise;
+    const fim = minDataProporcional30(fimOriginal, dataFimAnalise);
 
     return calcularFracaoAtiva(mes, ano, inicio, fim);
 }
@@ -517,17 +531,35 @@ function initGuiaDiferencas() {
 }
 
 // =====================================================================
-// FUNÇÃO AUXILIAR GERAR COMPETÊNCIAS (mantida da Fase 1)
+// FUNÇÃO AUXILIAR GERAR COMPETÊNCIAS (CORRIGIDA PARA ACEITAR DD/MM/AAAA)
 // =====================================================================
 
 function gerarCompetencias(inicio, fim) {
     if (!inicio || !fim) return [];
-    const parse = (s) => {
-        let partes = s.split('/');
-        return { mes: parseInt(partes[0], 10), ano: parseInt(partes[1], 10) };
+    
+    // Extrai mês e ano independente do formato (MM/AAAA ou DD/MM/AAAA)
+    const extrairMesAno = (str) => {
+        const partes = str.split('/');
+        let mes, ano;
+        if (partes.length === 3) {
+            // DD/MM/AAAA
+            mes = parseInt(partes[1], 10);
+            ano = parseInt(partes[2], 10);
+        } else if (partes.length === 2) {
+            // MM/AAAA
+            mes = parseInt(partes[0], 10);
+            ano = parseInt(partes[1], 10);
+        } else {
+            return null;
+        }
+        if (isNaN(mes) || isNaN(ano) || mes < 1 || mes > 12 || ano < 1900) return null;
+        return { mes, ano };
     };
-    const start = parse(inicio);
-    const end = parse(fim);
+    
+    const start = extrairMesAno(inicio);
+    const end = extrairMesAno(fim);
+    if (!start || !end) return [];
+    
     if (start.ano > end.ano || (start.ano === end.ano && start.mes > end.mes)) return [];
 
     const lista = [];
