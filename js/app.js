@@ -143,7 +143,7 @@ function sincronizarTermoInicial(campoOrigem) {
     const regexMMAAAA = /^\d{2}\/\d{4}$/;
     const regexDDMMAAAA = /^\d{2}\/\d{2}\/\d{4}$/;
 
-    // Se o valor estiver vazio, apenas sincroniza como vazio
+    // Se estiver vazio, sincroniza como vazio
     if (valor === '') {
         const outro = campoOrigem.id === 'termoInicialDiferencas' ?
             document.getElementById('termoInicialDiferencas2') :
@@ -170,8 +170,13 @@ function sincronizarTermoInicial(campoOrigem) {
 
     // Valida se está em um dos formatos aceitos
     if (!regexMMAAAA.test(valorNormalizado) && !regexDDMMAAAA.test(valorNormalizado)) {
-        // Se inválido, não sincroniza, mas não quebra
+        // Se inválido, não prossegue
         return;
+    }
+
+    // === CORREÇÃO: Atualiza o próprio campo de origem com o valor normalizado ===
+    if (campoOrigem.value !== valorNormalizado) {
+        campoOrigem.value = valorNormalizado;
     }
 
     // Sincroniza o outro campo com o mesmo valor
