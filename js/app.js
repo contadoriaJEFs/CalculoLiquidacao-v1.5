@@ -46,10 +46,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // ============================================================
     document.querySelectorAll('#termoInicialDiferencas, #termoInicialDiferencas2').forEach(el => {
         if (el) {
-            // Evento input: apenas armazena o valor bruto, sem formatar
+            // Evento input: apenas remove caracteres não permitidos
             el.addEventListener('input', function() {
                 if (termoInicialManual) {
-                    // Atualiza o estado com o valor cru (ainda sem barras)
+                    // Mantém apenas números, "/" e "-"
+                    const limpo = this.value.replace(/[^0-9\/\-]/g, '');
+                    if (this.value !== limpo) {
+                        this.value = limpo;
+                    }
+                    // Atualiza estado com o valor cru
                     estadoTermoInicial.valor = this.value.trim();
                 }
             });
@@ -144,71 +149,53 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function sincronizarTermoInicial(campoOrigem) {
     if (!termoInicialManual) return;
-    const valor = campoOrigem.value.trim();
+    
+    // 1. Pega o valor bruto
+    let valor = campoOrigem.value.trim();
 
-    // Expressões regulares para formatos já válidos
-    const regexMMAAAA = /^\d{2}\/\d{4}$/;
-    const regexDDMMAAAA = /^\d{2}\/\d{2}\/\d{4}$/;
+    // 2. Remove tudo que não for número
+    const apenasNumeros = valor.replace(/\D/g, '');
 
-    // Se vazio, sincroniza como vazio
-    if (valor === '') {
-        const outro = campoOrigem.id === 'termoInicialDiferencas' ?
-            document.getElementById('termoInicialDiferencas2') :
-            document.getElementById('termoInicialDiferencas');
-        if (outro && outro.value !== valor) {
-            outro.value = valor;
-        }
-        estadoTermoInicial.valor = valor;
+    // 3. Se não houver números, não faz nada
+    if (apenasNumeros.length === 0) {
         return;
     }
 
-    // Se já estiver em um formato válido, apenas sincroniza
-    if (regexMMAAAA.test(valor) || regexDDMMAAAA.test(valor)) {
-        const outro = campoOrigem.id === 'termoInicialDiferencas' ?
-            document.getElementById('termoInicialDiferencas2') :
-            document.getElementById('termoInicialDiferencas');
-        if (outro && outro.value !== valor) {
-            outro.value = valor;
-        }
-        estadoTermoInicial.valor = valor;
-        estadoTermoInicial.manual = true;
-        estadoTermoInicial.origem = 'manual';
-        return;
-    }
-
-    // Tenta normalizar se for apenas números
     let valorNormalizado = null;
-    if (/^\d+$/.test(valor)) {
-        // 6 dígitos -> MMAAAA -> MM/AAAA
-        if (valor.length === 6) {
-            const mes = parseInt(valor.substring(0, 2), 10);
-            const ano = parseInt(valor.substring(2), 10);
-            if (mes >= 1 && mes <= 12 && ano >= 1900 && ano <= 2100) {
-                valorNormalizado = valor.substring(0, 2) + '/' + valor.substring(2);
-            }
-        }
-        // 8 dígitos -> DDMMAAAA -> DD/MM/AAAA
-        else if (valor.length === 8) {
-            const dia = parseInt(valor.substring(0, 2), 10);
-            const mes = parseInt(valor.substring(2, 4), 10);
-            const ano = parseInt(valor.substring(4), 10);
-            if (dia >= 1 && dia <= 31 && mes >= 1 && mes <= 12 && ano >= 1900 && ano <= 2100) {
-                valorNormalizado = valor.substring(0, 2) + '/' + valor.substring(2, 4) + '/' + valor.substring(4);
-            }
+
+    // 4. Se tem 6 dígitos -> MM/AAAA
+    if (apenasNumeros.length === 6) {
+        const mes = parseInt(apenasNumeros.substring(0, 2), 10);
+        const ano = parseInt(apenasNumeros.substring(2), 10);
+        if (mes >= 1 && mes <= 12 && ano >= 1900 && ano <= 2100) {
+            valorNormalizado = apenasNumeros.substring(0, 2) + '/' + apenasNumeros.substring(2);
         }
     }
+    // 5. Se tem 8 dígitos -> DD/MM/AAAA
+    else if (apenasNumeros.length === 8) {
+        const dia = parseInt(apenasNumeros.substring(0, 2), 10);
+        const mes = parseInt(apenasNumeros.substring(2, 4), 10);
+        const ano = parseInt(apenasNumeros.substring(4), 10);
+        if (dia >= 1 && dia <= 31 && mes >= 1 && mes <= 12 && ano >= 1900 && ano <= 2100) {
+            valorNormalizado = apenasNumeros.substring(0, 2) + '/' + apenasNumeros.substring(2, 4) + '/' + apenasNumeros.substring(4);
+        }
+    }
+    // 6. Se o valor já estiver em formato válido (com barras), mantém
+    else if (/^\d{2}\/\d{4}$/.test(valor) || /^\d{2}\/\d{2}\/\d{4}$/.test(valor)) {
+        valorNormalizado = valor;
+    }
 
-    // Se não foi possível normalizar, não altera
+    // 7. Se não foi possível normalizar, não altera
     if (!valorNormalizado) {
         return;
     }
 
-    // Atualiza o próprio campo de origem com o valor normalizado
+    // 8. Atualiza o próprio campo de origem
     if (campoOrigem.value !== valorNormalizado) {
         campoOrigem.value = valorNormalizado;
     }
 
-    // Sincroniza o outro campo
+    // 9. Sincroniza o outro campo
     const outro = campoOrigem.id === 'termoInicialDiferencas' ?
         document.getElementById('termoInicialDiferencas2') :
         document.getElementById('termoInicialDiferencas');
@@ -216,7 +203,7 @@ function sincronizarTermoInicial(campoOrigem) {
         outro.value = valorNormalizado;
     }
 
-    // Atualiza o estado global
+    // 10. Atualiza o estado global
     estadoTermoInicial.valor = valorNormalizado;
     estadoTermoInicial.manual = true;
     estadoTermoInicial.origem = 'manual';
