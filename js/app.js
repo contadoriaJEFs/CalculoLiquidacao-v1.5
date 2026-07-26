@@ -14,7 +14,6 @@ function ativarGuia(nomeGuia) {
 
     // === CORREÇÃO: Montar a Guia 4 ao acessar a aba Diferenças ===
     if (nomeGuia === 'diferencas') {
-        // Se a função existir, montar a tabela
         if (typeof montarTabelaDiferencas === 'function') {
             montarTabelaDiferencas();
         }
@@ -38,7 +37,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Sincronização dos campos manuais
+    // Sincronização dos campos manuais – CORRIGIDO
     document.querySelectorAll('#termoInicialDiferencas, #termoInicialDiferencas2').forEach(el => {
         if (el) {
             el.addEventListener('input', function() {
@@ -46,9 +45,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     sincronizarTermoInicial(this);
                 }
             });
+            // Removida a chamada a aplicarMascaraData(this, true) no blur
             el.addEventListener('blur', function() {
                 if (termoInicialManual) {
-                    aplicarMascaraData(this, true);
+                    // Apenas sincroniza, sem aplicar máscara forçada
                     sincronizarTermoInicial(this);
                 }
             });
@@ -130,3 +130,60 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
+
+// =====================================================================
+// FUNÇÃO SINCORNIZAR TERMO INICIAL – CORRIGIDA
+// =====================================================================
+
+function sincronizarTermoInicial(campoOrigem) {
+    if (!termoInicialManual) return;
+    const valor = campoOrigem.value.trim();
+
+    // Aceita MM/AAAA ou DD/MM/AAAA
+    const regexMMAAAA = /^\d{2}\/\d{4}$/;
+    const regexDDMMAAAA = /^\d{2}\/\d{2}\/\d{4}$/;
+
+    // Se o valor estiver vazio, apenas sincroniza como vazio
+    if (valor === '') {
+        const outro = campoOrigem.id === 'termoInicialDiferencas' ?
+            document.getElementById('termoInicialDiferencas2') :
+            document.getElementById('termoInicialDiferencas');
+        if (outro && outro.value !== valor) {
+            outro.value = valor;
+        }
+        estadoTermoInicial.valor = valor;
+        return;
+    }
+
+    // Tenta normalizar se for apenas números
+    let valorNormalizado = valor;
+    if (/^\d+$/.test(valor)) {
+        // Se tem 6 dígitos -> MMAAAA -> MM/AAAA
+        if (valor.length === 6) {
+            valorNormalizado = valor.substring(0, 2) + '/' + valor.substring(2);
+        }
+        // Se tem 8 dígitos -> DDMMAAAA -> DD/MM/AAAA
+        else if (valor.length === 8) {
+            valorNormalizado = valor.substring(0, 2) + '/' + valor.substring(2, 4) + '/' + valor.substring(4);
+        }
+    }
+
+    // Valida se está em um dos formatos aceitos
+    if (!regexMMAAAA.test(valorNormalizado) && !regexDDMMAAAA.test(valorNormalizado)) {
+        // Se inválido, não sincroniza, mas não quebra
+        return;
+    }
+
+    // Sincroniza o outro campo com o mesmo valor
+    const outro = campoOrigem.id === 'termoInicialDiferencas' ?
+        document.getElementById('termoInicialDiferencas2') :
+        document.getElementById('termoInicialDiferencas');
+    if (outro && outro.value !== valorNormalizado) {
+        outro.value = valorNormalizado;
+    }
+
+    // Atualiza o estado global com o valor preservado
+    estadoTermoInicial.valor = valorNormalizado;
+    estadoTermoInicial.manual = true;
+    estadoTermoInicial.origem = 'manual';
+}
