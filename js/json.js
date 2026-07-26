@@ -72,6 +72,49 @@ function coletarDadosCaso() {
     return dados;
 }
 
+// =====================================================================
+// AUXILIARES PARA NOME DO ARQUIVO JSON
+// =====================================================================
+
+function sanitizarAutor(nome) {
+    if (!nome || nome.trim() === '') return 'SEM_AUTOR';
+    // Remove acentos
+    const semAcentos = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    // Maiúsculas, substitui espaços por underline, remove caracteres inválidos
+    let sanitizado = semAcentos
+        .toUpperCase()
+        .replace(/\s+/g, '_')
+        .replace(/[^A-Z0-9_]/g, '');
+    // Remove underlines duplicados
+    sanitizado = sanitizado.replace(/_+/g, '_');
+    // Remove underline no início e fim
+    sanitizado = sanitizado.replace(/^_|_$/g, '');
+    return sanitizado || 'SEM_AUTOR';
+}
+
+function extrairSeisPrimeirosNumeros(processo) {
+    if (!processo) return 'SEM_PROCESSO';
+    const numeros = processo.replace(/\D/g, '');
+    if (numeros.length === 0) return 'SEM_PROCESSO';
+    const seisPrimeiros = numeros.substring(0, 6);
+    return seisPrimeiros;
+}
+
+function formatarDataHoraArquivo() {
+    const agora = new Date();
+    const dia = String(agora.getDate()).padStart(2, '0');
+    const mes = String(agora.getMonth() + 1).padStart(2, '0');
+    const ano = agora.getFullYear();
+    const horas = String(agora.getHours()).padStart(2, '0');
+    const minutos = String(agora.getMinutes()).padStart(2, '0');
+    const segundos = String(agora.getSeconds()).padStart(2, '0');
+    return `${dia}${mes}${ano}-${horas}-${minutos}-${segundos}`;
+}
+
+// =====================================================================
+// EXPORTAR – COM NOME PERSONALIZADO
+// =====================================================================
+
 function exportarCaso() {
     const dados = coletarDadosCaso();
     const json = JSON.stringify(dados, null, 2);
@@ -96,6 +139,10 @@ function exportarCaso() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 }
+
+// =====================================================================
+// IMPORTAR
+// =====================================================================
 
 function importarCaso(event) {
     const file = event.target.files[0];
@@ -226,6 +273,10 @@ function importarCaso(event) {
     event.target.value = '';
 }
 
+// =====================================================================
+// NOVO CASO / LIMPAR
+// =====================================================================
+
 function novoCaso() {
     if (confirm('Limpar todos os dados do caso atual?')) {
         limparFormulario();
@@ -235,42 +286,3 @@ function novoCaso() {
         document.querySelector('input[name="modoCompensacao"][value="limite"]').checked = true;
     }
 }
-// =====================================================================
-// AUXILIARES PARA NOME DO ARQUIVO JSON
-// =====================================================================
-
-function sanitizarAutor(nome) {
-    if (!nome || nome.trim() === '') return 'SEM_AUTOR';
-    // Remove acentos
-    const semAcentos = nome.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    // Maiúsculas, substitui espaços por underline, remove caracteres inválidos
-    let sanitizado = semAcentos
-        .toUpperCase()
-        .replace(/\s+/g, '_')
-        .replace(/[^A-Z0-9_]/g, '');
-    // Remove underlines duplicados
-    sanitizado = sanitizado.replace(/_+/g, '_');
-    // Remove underline no início e fim
-    sanitizado = sanitizado.replace(/^_|_$/g, '');
-    return sanitizado || 'SEM_AUTOR';
-}
-
-function extrairSeisPrimeirosNumeros(processo) {
-    if (!processo) return 'SEM_PROCESSO';
-    const numeros = processo.replace(/\D/g, '');
-    if (numeros.length === 0) return 'SEM_PROCESSO';
-    const seisPrimeiros = numeros.substring(0, 6);
-    return seisPrimeiros;
-}
-
-function formatarDataHoraArquivo() {
-    const agora = new Date();
-    const dia = String(agora.getDate()).padStart(2, '0');
-    const mes = String(agora.getMonth() + 1).padStart(2, '0');
-    const ano = agora.getFullYear();
-    const horas = String(agora.getHours()).padStart(2, '0');
-    const minutos = String(agora.getMinutes()).padStart(2, '0');
-    const segundos = String(agora.getSeconds()).padStart(2, '0');
-    return `${dia}${mes}${ano}-${horas}-${minutos}-${segundos}`;
-}
-
